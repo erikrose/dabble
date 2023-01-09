@@ -45,10 +45,20 @@ def test_while():
         ['begin',
             ['var', 'counter', 0],
             ['while', ['<', 'counter', 10],
-                ['begin',
-                    ['set', 'counter', ['+', 'counter', 1]]
-                ]
+                ['set', 'counter', ['+', 'counter', 1]]
             ],
             'counter'
         ]
     ) == 10
+
+
+def test_begin():
+    """Make sure `begin` executes things in sequence and the value is the last
+    expression."""
+    assert eval_with_new_env(
+            ['begin',
+                ['var', 'x', 10],
+                ['var', 'y', 20],
+                ['+', ['*', 'x', 'y'], 30]
+            ]
+    ) == 230

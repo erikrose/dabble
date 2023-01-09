@@ -48,10 +48,10 @@ def eval(exp, env):
         _, name, value = exp
         return env.define(name, eval(value, env))
 
-    # Blocks:
+    # Sequences. These don't introduce a new scope. Their value is that of their
+    # last expression.
     if verb == 'begin':
-        child_env = Environment({}, env)
-        return _eval_block(exp, child_env)
+        return _eval_block(exp, env)
 
     # Mutation:
     if verb == 'set':
