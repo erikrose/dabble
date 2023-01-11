@@ -10,20 +10,15 @@ class Environment:
         self.vars = vars or {}
         self.parent = parent
 
-    def define(self, name, value):
-        """Create a var with the given name and value."""
-        self.vars[name] = value
-        return value
-
     def look_up(self, name):
         """Return the value of a var in this scope or the nearest parent one
         where it's defined."""
         return self._env_where_bound(name).vars[name]
 
     def assign(self, name, value):
-        """Set an existing var to a value."""
-        env = self._env_where_bound(name)
-        env.vars[name] = value
+        """Set a var, new or existing, to a value."""
+        self.vars[name] = value
+        return value
 
     def _env_where_bound(self, name):
         """Return the innermost environment from the scope chain (starting at

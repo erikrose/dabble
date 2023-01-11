@@ -22,15 +22,15 @@ def test_expressions_as_addends():
 
 def test_var_declaration_and_lookup():
     env = Environment(parent=pervasives)
-    assert eval(['var', 'x', 10], env) == 10
+    assert eval(['set', 'x', 10], env) == 10
     assert eval('x', env) == 10
 
 
 def test_if_and_greater_than():
     assert eval_with_new_env(
         ['begin',
-            ['var', 'x', 10],
-            ['var', 'y', 0],
+            ['set', 'x', 10],
+            ['set', 'y', 0],
             ['if', ['>', 'x', 10],
                 ['set', 'y', 20],
                 ['set', 'y', 30],
@@ -43,7 +43,7 @@ def test_if_and_greater_than():
 def test_while():
     assert eval_with_new_env(
         ['begin',
-            ['var', 'counter', 0],
+            ['set', 'counter', 0],
             ['while', ['<', 'counter', 10],
                 ['set', 'counter', ['+', 'counter', 1]]
             ],
@@ -57,8 +57,8 @@ def test_begin():
     expression."""
     assert eval_with_new_env(
             ['begin',
-                ['var', 'x', 10],
-                ['var', 'y', 20],
+                ['set', 'x', 10],
+                ['set', 'y', 20],
                 ['+', ['*', 'x', 'y'], 30]
             ]
     ) == 230

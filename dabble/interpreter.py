@@ -43,17 +43,12 @@ def eval(exp, env):
 
     verb = exp[0]
 
-    # Var declaration:
-    if verb == 'var':
-        _, name, value = exp
-        return env.define(name, eval(value, env))
-
     # Sequences. These don't introduce a new scope. Their value is that of their
     # last expression.
     if verb == 'begin':
         return _eval_block(exp, env)
 
-    # Mutation:
+    # Assignment:
     if verb == 'set':
         _, ref, value = exp  # can be a var name of a ref, like to a class instance
         return env.assign(ref, eval(value, env))
