@@ -1,6 +1,6 @@
-from .interpreter import run
-
 from sys import argv
+
+from .interpreter import run
 
 
 def main():
