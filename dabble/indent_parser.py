@@ -57,12 +57,7 @@ def lex_indented(text):
             if new_indent == old_indent:
                 if ever_opened_anything:
                     yield CLOSER
-                yield OPENER  # Factor this...
-                ever_opened_anything = True  # ...and this up.
             elif new_indent.startswith(old_indent):  # indent
-                # Open the nested list we're about to start making:
-                yield OPENER
-                ever_opened_anything = True
                 encloser_starts.append(len(old_indent))
             elif old_indent.startswith(new_indent):  # outdent
                 # You get one just for ending the line: this ends the current
@@ -73,10 +68,13 @@ def lex_indented(text):
                        encloser_starts[-1] >= len(new_indent)):
                     encloser_starts.pop()
                     yield CLOSER
-                # Then we start the new line's list:
-                yield OPENER
             else:
                 raise LexError("Indentation was not consistent. The whitespace characters that make up each indent must be either an addition to or a truncation of the ones in the indent above. You can't just swap out tabs for spaces suddenly.")
+
+            # Open the new (child, sibling, or outdented) list we're about to
+            # start making:
+            yield OPENER
+            ever_opened_anything = True
             old_indent = new_indent
         elif type == 'unmatched':
             raise LexError('Unrecognized token: "%s".' % match.group())
