@@ -9,7 +9,7 @@ token_pattern = re.compile(
     r'(?P<dent>^[ \t]*)|'
     r'(?P<horizontal_whitespace>[ \t]+)|'
     r'(?P<word>[-a-zA-Z]+)|'
-    r'(?P<int>1-9(0-9)*)|'
+    r'(?P<int>(?:0|1-9(0-9)*))|'
     r'(?P<unmatched>.)',
     flags=re.M)
 
