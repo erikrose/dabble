@@ -2,8 +2,8 @@
 
 from pytest import skip
 
-from dabble.indent_parser import lex_indented, OPENER, CLOSER
-from dabble.parser import parse
+from dabble.indent_parser import lex, parse, OPENER, CLOSER
+from dabble.parser import parse as parse_parenthesized
 
 
 def test_basics():
@@ -23,11 +23,11 @@ x"""
 (frob ())
 x
 )"""
-    assert parse_indented(indented) == parse(parenthesized)
+    assert parse(indented) == parse_parenthesized(parenthesized)
 
 
-def lex(text):
-    return list(lex_indented(text))
+def lexed(text):
+    return list(lex(text))
 
 
 def test_comments_at_end_ignored():
@@ -37,7 +37,7 @@ def test_comments_at_end_ignored():
 same dent
 # Comment
 """
-    assert lex(text) == [
+    assert lexed(text) == [
         OPENER, 'some', 'dent', CLOSER,
         OPENER, 'same', 'dent', CLOSER]
 
@@ -50,7 +50,7 @@ def test_outdent_closer_count():
  b
   c
 d"""
-    assert lex(text) == [
+    assert lexed(text) == [
         OPENER, 'a',
             OPENER, 'b',
                 OPENER, 'c', CLOSER,
@@ -65,7 +65,7 @@ def test_close_indents_at_eof():
  b
   c
    d"""
-    assert lex(text) == [
+    assert lexed(text) == [
         OPENER, 'a',
             OPENER, 'b',
                 OPENER, 'c',
@@ -77,7 +77,7 @@ def test_close_indents_at_eof():
 
 def test_empty_text():
     """Make sure we do something reasonable on an empty file."""
-    assert lex('') == []
+    assert lexed('') == []
 
 
 def test_everything_indented():
@@ -86,5 +86,30 @@ def test_everything_indented():
     skip("We don't support this yet.")
     text = """ a
  b"""
-    assert lex(text) == [OPENER, 'a', CLOSER,
-                         OPENER, 'b', CLOSER]
+    assert lexed(text) == [OPENER, 'a', CLOSER,
+                           OPENER, 'b', CLOSER]
+
+
+def test_whitespace_only_lines_are_skipped():
+    """Make sure lines consisting only of whitespace have no effect on the
+    surrounding indentation."""
+    text = """a
+
+     b 0"""
+    assert parsed(text) == [['a', ['b', 0]]]
+
+
+def parsed(text):
+    return parse(lex(text))
+
+
+def test_parse_single_line():
+    assert parse([OPENER, 4, 5, CLOSER]) == [[4, 5]]
+
+
+def test_parse_indented():
+    text = """a
+ b
+  c 0
+d"""
+    assert parsed(text) == [['a', ['b', ['c', 0]]], ['d']]
