@@ -112,4 +112,13 @@ def test_parse_indented():
  b
   c 0
 d"""
-    assert parsed(text) == [['a', ['b', ['c', 0]]], ['d']]
+    assert parsed(text) == [['a', ['b', ['c', 0]]], 'd']
+
+
+def test_single_atom_is_not_list():
+    """A single atom on a list should be just the atom, not a 1-list."""
+    assert parsed('2') == [2]
+    assert parsed("""
+if smoo
+    0
+    1""") == [['if', 'smoo', 0, 1]]
