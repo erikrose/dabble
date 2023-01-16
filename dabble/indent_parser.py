@@ -8,8 +8,8 @@ token_pattern = re.compile(
     r'(?P<skipped_line>^[ \t]*(?:#.*|)$)|'
     r'(?P<dent>^[ \t]*)|'
     r'(?P<horizontal_whitespace>[ \t]+)|'
-    r'(?P<word>[-a-zA-Z]+)|'
-    r'(?P<int>(?:0|1-9(0-9)*))|'
+    r'(?P<word>[-a-zA-Z+*/><=]+)|'
+    r'(?P<int>(?:0|[1-9]([0-9])*))|'
     r'(?P<unmatched>.)',
     flags=re.M)
 
@@ -109,5 +109,11 @@ def _parse_core(token_iter):
 
 
 def parse(tokens):
-    """Turn the token stream from the lexer into a parse tree."""
+    """Turn the token stream from the lexer into a parse tree.
+
+    expr = atom | list
+    atom = int | word
+    list = OPENER expr* CLOSER
+
+    """
     return _parse_core(iter(tokens))
