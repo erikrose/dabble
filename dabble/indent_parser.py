@@ -10,6 +10,9 @@ token_pattern = re.compile(
     r'(?P<horizontal_whitespace>[ \t]+)|'
     r'(?P<word>[-a-zA-Z+*/><=]+)|'
     r'(?P<int>(?:0|[1-9]([0-9])*))|'
+#    r'(?P<string>\"[^\"]*")|'
+    r'(?P<paren>\()|'
+    r'(?P<end_paren>\))|'
     r'(?P<unmatched>.)',
     flags=re.M)
 
@@ -25,6 +28,8 @@ class TokenConst(object):
         return self.identity
 
 
+# OPENER and CLOSER represent the start and end of a whitespace-delimited list.
+# They do not correspond directly to indents and outdents.
 OPENER = TokenConst('OPENER')
 CLOSER = TokenConst('CLOSER')
 
@@ -53,41 +58,54 @@ def lex(text):
 
     """
     old_indent = ''
-    encloser_starts = []  # a stack of lengths of indents of lists that enclose this one
+    # A stack of lengths of indents of indentation-based lists that enclose this
+    # one:
+    encloser_starts = []
     ever_opened_anything = False
+    # How many paren pairs we're inside:
+    enclosing_parens = 0
 
     for match in token_pattern.finditer(text):
         type = match.lastgroup
         if type == 'dent':
-            new_indent = match.group('dent')
-            if new_indent == old_indent:
-                if ever_opened_anything:
+            if not enclosing_parens:  # Ignore indentation inside parens.
+                new_indent = match.group('dent')
+                if new_indent == old_indent:
+                    if ever_opened_anything:
+                        yield CLOSER
+                elif new_indent.startswith(old_indent):  # indent
+                    encloser_starts.append(len(old_indent))
+                elif old_indent.startswith(new_indent):  # outdent
+                    # You get one just for ending the line: this ends the
+                    # current line's list.
                     yield CLOSER
-            elif new_indent.startswith(old_indent):  # indent
-                encloser_starts.append(len(old_indent))
-            elif old_indent.startswith(new_indent):  # outdent
-                # You get one just for ending the line: this ends the current
-                # line's list.
-                yield CLOSER
-                # Then you get another for each level you outdent:
-                while (encloser_starts and
-                       encloser_starts[-1] >= len(new_indent)):
-                    encloser_starts.pop()
-                    yield CLOSER
-            else:
-                raise LexError("Indentation was not consistent. The whitespace characters that make up each indent must be either an addition to or a truncation of the ones in the indent above. You can't just swap out tabs for spaces suddenly.")
+                    # Then you get another for each level you outdent:
+                    while (encloser_starts and
+                           encloser_starts[-1] >= len(new_indent)):
+                        encloser_starts.pop()
+                        yield CLOSER
+                else:
+                    raise LexError("Indentation was not consistent. The whitespace characters that make up each indent must be either an addition to or a truncation of the ones in the indent above. You can't just swap out tabs for spaces suddenly.")
 
-            # Open the new (child, sibling, or outdented) list we're about to
-            # start making:
-            yield OPENER
-            ever_opened_anything = True
-            old_indent = new_indent
-        elif type == 'unmatched':
-            raise LexError('Unrecognized token: "%s".' % match.group())
+                # Open the new (child, sibling, or outdented) list we're about
+                # to start making:
+                yield OPENER
+                ever_opened_anything = True
+                old_indent = new_indent
+        elif type == 'paren':
+            enclosing_parens += 1
+            yield '('
+        elif type == 'end_paren':
+            if enclosing_parens <= 0:
+                raise LexError("You closed a parenthesis that wasn't open.")
+            enclosing_parens -= 1
+            yield ')'
         elif type == 'int':
             yield int(match.group())
         elif type == 'word':
             yield match.group()
+        elif type == 'unmatched':
+            raise LexError('Unrecognized token: "%s".' % match.group())
 
     for _ in encloser_starts:
         yield CLOSER
@@ -95,15 +113,15 @@ def lex(text):
         yield CLOSER
 
 
-def _parse_core(token_iter):
+def _parse_core(token_iter, closer_we_are_waiting_for):
     ret = []
     for token in token_iter:
-        if token is OPENER:
-            ret.append(_parse_core(token_iter))
-        elif token is CLOSER:
+        if token in (OPENER, '('):
+            ret.append(_parse_core(token_iter, CLOSER if token is OPENER else ')'))
+        elif token is closer_we_are_waiting_for:
             # A single atom on a line is just the atom, not a 1-list:
-            if len(ret) == 1:
-                # This is a cheap way of saying we saw the token sequence
+            if len(ret) == 1 and closer_we_are_waiting_for is CLOSER:
+                # This is another way of saying we saw the token sequence
                 # OPENER, atom, CLOSER.
                 return ret[0]
             return ret
@@ -120,4 +138,4 @@ def parse(tokens):
     list = OPENER expr* CLOSER
 
     """
-    return _parse_core(iter(tokens))
+    return _parse_core(iter(tokens), CLOSER)

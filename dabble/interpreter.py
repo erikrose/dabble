@@ -3,7 +3,7 @@ import re
 from sys import argv
 
 from .environment import Environment
-from .parser import parse
+from .indent_parser import lex, parse
 
 
 pervasives = Environment({
@@ -106,7 +106,8 @@ def run(program, env=None):
     program."""
     if env is None:
         env = Environment(parent=pervasives)
-    return _eval_block(['dummy', *parse('(' + program + ')')], env)
+    parsed = parse(lex(program))
+    return _eval_block(['dummy', *parsed], env)
 
 
 def _eval_block(block, env):

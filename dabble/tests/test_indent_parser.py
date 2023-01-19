@@ -1,29 +1,8 @@
 """Tests for the indentation-based parser"""
 
-from pytest import skip
+from pytest import raises, skip
 
-from dabble.indent_parser import lex, parse, OPENER, CLOSER
-from dabble.parser import parse as parse_parenthesized
-
-
-def test_basics():
-    """Make sure lists and single-atoms-on-a-line parse."""
-    skip("Single atoms on a line are currently construed as 1-lists. Not sure if we're going to change that. Also, parser atop indentation lexer isn't yet implemented.")
-    indented = """set x to 8
-set frob to
-    function emptyList
-        set x to 9
-frob emptyList
-x"""
-    parenthesized = """(
-(set x 8)
-(set frob
-    (fun ()
-        (set x 9)))
-(frob ())
-x
-)"""
-    assert parse(indented) == parse_parenthesized(parenthesized)
+from dabble.indent_parser import lex, LexError, parse, OPENER, CLOSER
 
 
 def lexed(text):
@@ -90,6 +69,21 @@ def test_everything_indented():
                            OPENER, 'b', CLOSER]
 
 
+def test_basics():
+    #assert parsed('"hi"') == '"hi"'
+    assert parsed('word***') == ['word***']
+    assert parsed('(8 9 abc+)') == [[8, 9, 'abc+']]
+    assert parsed('(1 2 (3 4))') == [[1, 2, [3, 4]]]
+    with raises(LexError):
+        parsed(')')
+
+
+def test_unclosed_parens():
+    skip("This doesn't raise an error yet. You should probably raise an error from lex() iff it returns when enclosing_parens > 0.")
+    with raises(ParseError):
+        parsed('(1 2')
+
+
 def test_whitespace_only_lines_are_skipped():
     """Make sure lines consisting only of whitespace have no effect on the
     surrounding indentation."""
@@ -122,3 +116,19 @@ def test_single_atom_is_not_list():
 if smoo
     0
     1""") == [['if', 'smoo', 0, 1]]
+
+
+def test_parens():
+    assert parsed('1 (2 3 4) 5') == [[1, [2, 3, 4], 5]]
+    assert parsed("""
+1
+    2 (3 4 5)""") == [[1, [2, [3, 4, 5]]]]
+
+
+def test_single_atom_in_parens_is_a_list():
+    """When a single atom is on a line by itself, it should be just the atom,
+    but when a single atom is in parens by itself, it should be a 1-list."""
+    text = """
+fun (x)
+    2"""
+    assert parsed(text) == [['fun', ['x'], 2]]

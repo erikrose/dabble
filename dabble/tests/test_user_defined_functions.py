@@ -3,53 +3,50 @@ from dabble.interpreter import run
 
 def test_first_class_lambda():
     assert run("""
-        (set on-click
-            (fun (callback)
-                (begin
-                    (set x 10)
-                    (set y 20)
-                    (callback (+ x y))
-                )
-            )
-        )
+set on-click
+    fun (callback)
+        begin
+            set x 10
+            set y 20
+            callback (+ x y)
 
-        (on-click (fun (data) (* data 10)))
+on-click
+    fun (data)
+        * data 10
     """) == 300
 
 
 def test_function_definition_and_evaluation():
     assert run("""
-        (set square
-            (fun (x)
-                (* x x)
-            )
-        )
+set square
+    fun (x)
+        * x x
 
-        (square 2)
+square 2
     """) == 4
 
 
 def test_closures_and_first_class_functions():
     assert run("""
-        (set make_adder
-            (fun (how_much)
-                (fun (addend)
-                        (+ addend how_much))))
+set make-adder
+    fun (how-much)
+        fun (addend)
+            + addend how-much
 
-        (set my_adder (make_adder 100))
-        (my_adder 50)
+set my-adder (make-adder 100)
+my-adder 50
     """) == 150
 
 
 def test_recursion():
     assert run("""
-        (set factorial 
-            (fun (x)
-                (if (== x 1)
-                    1
-                    (* x (factorial (- x 1))))))
+set factorial 
+    fun (x)
+        if (== x 1)
+            1
+            * x (factorial (- x 1))
 
-        (factorial 5)
+factorial 5
     """) == 120
 
 
@@ -60,25 +57,27 @@ def test_functions_make_new_scopes():
 
     """
     assert run("""
-        (set x 8)
-        (set frob
-            (fun ()
-                (set x 9)))
-        (frob)
-        x
+set x 8
+set frob
+    fun ()
+        set x 9
+(frob)
+x
     """) == 8
 
 
 def test_nested_functions_make_new_scopes():
     """Make sure inner functions' vars don't leak into outers' scopes."""
     assert run("""
-        (set frob
-            (fun ()
-                (begin
-                    (set x 1)
-                    ((fun ()
-                        (set x 2)))
-                    x)))
+set frob
+    fun ()
+        begin
+            set x 1
+            set smoo
+                fun ()
+                    set x 2
+            (smoo)
+            x
 
-        (frob)
+(frob)
     """) == 1

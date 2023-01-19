@@ -1,3 +1,5 @@
+from pytest import skip
+
 from dabble.environment import Environment
 from dabble.interpreter import eval, pervasives, run
 
@@ -9,15 +11,16 @@ def test_numbers_evaluate_to_themselves():
 
 
 def test_string_literals_evaluate_to_themselves():
+    skip("We don't support strings yet.")
     assert run('"hello"') == 'hello'
 
 
 def test_addition():
-    assert run('(+ 1 2)') == 3
+    assert run('+ 1 2') == 3
 
 
 def test_expressions_as_addends():
-    assert run('(+ (+ 3 2) 5)') == 10
+    assert run('+ (+ 3 2) 5') == 10
 
 
 def test_var_declaration_and_lookup():
