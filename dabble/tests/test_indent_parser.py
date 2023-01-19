@@ -79,8 +79,7 @@ def test_basics():
 
 
 def test_unclosed_parens():
-    skip("This doesn't raise an error yet. You should probably raise an error from lex() iff it returns when enclosing_parens > 0.")
-    with raises(ParseError):
+    with raises(LexError):
         parsed('(1 2')
 
 

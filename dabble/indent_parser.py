@@ -68,7 +68,7 @@ def lex(text):
     for match in token_pattern.finditer(text):
         type = match.lastgroup
         if type == 'dent':
-            if not enclosing_parens:  # Ignore indentation inside parens.
+            if enclosing_parens <= 0:  # Ignore indentation inside parens.
                 new_indent = match.group('dent')
                 if new_indent == old_indent:
                     if ever_opened_anything:
@@ -97,6 +97,8 @@ def lex(text):
             yield '('
         elif type == 'end_paren':
             if enclosing_parens <= 0:
+                # We have to keep track of enclosing_parens anyway, so we might
+                # as well raise this now rather than later, in the parser:
                 raise LexError("You closed a parenthesis that wasn't open.")
             enclosing_parens -= 1
             yield ')'
@@ -125,6 +127,9 @@ def _parse_core(token_iter, closer_we_are_waiting_for):
                 # OPENER, atom, CLOSER.
                 return ret[0]
             return ret
+        elif token is CLOSER:
+            # Superfluous end parentheses are caught earlier, in the lexer.
+            raise LexError("You're missing an end parenthesis.")
         else:
             ret.append(token)
     return ret
