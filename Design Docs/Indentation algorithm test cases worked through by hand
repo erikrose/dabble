@@ -1,0 +1,62 @@
+test_ending_at_partial_outdent:
+{{if foo  # indent to at:0, so {{
+    {{1  # indent to 4, so {{ at:0,4
+  }}else  # partial, so }} and pop. at:0
+}}  # EOF, so pop. at:[]
+
+{{if foo  # indent to at:0, so {{
+    {{1  # indent to at:0,4, so {{
+    }{0  # samedent, so }{. at:0,4
+}}}}  # outdent 4 and 0: }} for each. No samedent afterward since there's no next line.
+
+test_close_indents_at_eof:
+{{a  # indent to at:0, so {{
+ {{b  # indent to at:0,1, so {{
+  {{c  # indent to at:0,1,2, so {{
+   {{d  # indent to at:0,1,2,3, so {{
+}}}}}}}}  # EOF, so pop 4 times, }} for each
+
+test_partial_indent:
+{{if foo  # indent to at:0, so {{
+    {{1  # indent to at:0,4, so {{
+  }}else  # partial, so }} and pop. at:0
+    {{0  # indent to at:0,4, so {{
+}}}}  # EOF, so pop twice, }} each time
+
+
+
+test_2_statements:
+{{do foo  # indent to 0, so {{. at:0
+}{do bar  # samedent, so }{. at:0
+}}  # EOF, so pop 0: }}
+
+
+test_2_statements_with_first_nested:
+{{do foo  # indent to 0, so {{. at:0
+    {{and bar  # indent to 4, so {{. at:0,4
+}} }{do baz  # outdent 4. }}. at:0. Then samedent, so }{. at:0
+}}  # EOF, so pop 0. }}
+
+if outdent:
+    if full:
+        pop as many levels are you are outdenting, emitting }} each time
+        Then, since we have another line of code (or else this would be EOF), emit }{.
+    if partial:
+        emit }}
+        pop at.
+√ if EOF:
+    pop as many levels are there are, emitting }} for each.
+√ if BOF:
+    push 0. Emit {{.
+√ if indent:
+    push indent level. Emit {{.
+√ if samedent:
+    Emit }{
+
+
+test_empty_string:
+# This is going to yield no tokens. Rig it so it yields {}.
+
+test_one_liner:
+{{foo  # indent, so {{. at: 0
+}}  # EOF: }}. at:[]
