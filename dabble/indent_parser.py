@@ -68,23 +68,19 @@ def lex(text):
 
     for match in token_pattern.finditer(text):
         type = match.lastgroup
-        print(type, match.group().strip(), ':')
         if type == 'dent':
             if enclosing_parens <= 0:  # Ignore indentation inside parens.
                 new_indent = match.group('dent')
                 if not at:  # BOF
-                    print('BOF: [[')
                     at.append(0)
                     yield OPEN
                     yield OPEN
                 elif new_indent == old_indent:  # same dent
-                    print('samedent: ][')
                     yield CLOSE
                     # Open the new (sibling) list we're about
                     # to start making:
                     yield OPEN
                 elif new_indent.startswith(old_indent):  # indent
-                    print('indent and open the line: OPEN, OPEN')
                     at.append(len(new_indent))
                     # Open the new (child) block we're about
                     # to start making:
@@ -95,26 +91,21 @@ def lex(text):
                     assert len(at) >= 2, "How can there be no encloser if we're outdenting?"
                     # You get one just for ending the line: this ends the
                     # current line's list.
-                    print('    outdent or partial ]')
                     yield CLOSE
                     if len(new_indent) <= at[-2]:  # full outdent  # TODO: Don't just measure and keep track of lengths of indents, or we won't be able to support mixed tabs and spaces. Or will we? Maybe it just works, since indenting always adds length and dedenting always subtracts it.
-                        print('full outdent')
                         # Then you get another for each level you outdent:
                         while len(at) >= 2 and len(new_indent) <= at[-2]:
-                            print(f'    pop level {at[-1]} ]]')
                             yield CLOSE
                             yield CLOSE
                             at.pop()
                         # Now we're going to start a new line, because otherwise
                         # this would be EOF and be taken care of down at the
                         # bottom of this proc.
-                        print('    and open: [')
                         yield OPEN
                     else:  # partial outdent
                         # We outdented from the previous line but not out to the
                         # level of the previous indent.
 
-                        print('partial outdent, so close block: ]')
                         # End the block:
                         yield CLOSE
                         # Pop the indentation into the block we just closed:
@@ -142,7 +133,7 @@ def lex(text):
             raise LexError('Unrecognized token: "%s".' % match.group())
 
     for indent in at:
-        print(f'EOF: ] to end line and block {indent}: ', end='')
+        # One closer to end the line and another to end the block:
         yield CLOSE
         yield CLOSE
 
