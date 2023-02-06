@@ -2,7 +2,7 @@
 
 from pytest import raises, skip
 
-from dabble.indent_parser import lex, LexError, parse, OPENER, CLOSER
+from dabble.indent_parser import lex, LexError, parse, OPEN, CLOSE
 
 
 def lexed(text):
@@ -10,17 +10,17 @@ def lexed(text):
 
 
 def test_comments_at_end_ignored():
-    """We shouldn't have any hanging third opener at the end due to the trailing
+    """We shouldn't have any hanging third OPEN at the end due to the trailing
     comment or newline."""
     text = """some dent
 same dent
 # Comment
 """
     assert lexed(text) == [
-        OPENER,
-            OPENER, 'some', 'dent', CLOSER,
-            OPENER, 'same', 'dent', CLOSER,
-        CLOSER]
+        OPEN,
+            OPEN, 'some', 'dent', CLOSE,
+            OPEN, 'same', 'dent', CLOSE,
+        CLOSE]
 
 
 def test_outdent_closer_count():
@@ -32,14 +32,14 @@ def test_outdent_closer_count():
   c
 d"""
     assert lexed(text) == [
-        OPENER,
-            OPENER, 'a',
-                OPENER, OPENER, 'b',
-                    OPENER, OPENER, 'c', CLOSER, CLOSER,
-                CLOSER, CLOSER,
-            CLOSER,
-            OPENER, 'd', CLOSER,
-        CLOSER]
+        OPEN,
+            OPEN, 'a',
+                OPEN, OPEN, 'b',
+                    OPEN, OPEN, 'c', CLOSE, CLOSE,
+                CLOSE, CLOSE,
+            CLOSE,
+            OPEN, 'd', CLOSE,
+        CLOSE]
 
 
 def test_close_indents_at_eof():
@@ -49,15 +49,15 @@ def test_close_indents_at_eof():
   c
    d"""
     assert lexed(text) == [
-        OPENER,
-        OPENER, 'a',
-            OPENER, OPENER, 'b',
-                OPENER, OPENER, 'c',
-                    OPENER, OPENER, 'd', CLOSER, CLOSER,
-                CLOSER, CLOSER,
-            CLOSER, CLOSER,
-        CLOSER,
-        CLOSER]
+        OPEN,
+        OPEN, 'a',
+            OPEN, OPEN, 'b',
+                OPEN, OPEN, 'c',
+                    OPEN, OPEN, 'd', CLOSE, CLOSE,
+                CLOSE, CLOSE,
+            CLOSE, CLOSE,
+        CLOSE,
+        CLOSE]
 
 
 def test_empty_text():
@@ -71,15 +71,15 @@ def test_everything_indented():
     skip("We don't support this yet.")
     text = """ a
  b"""
-    assert lexed(text) == [OPENER, 'a', CLOSER,
-                           OPENER, 'b', CLOSER]
+    assert lexed(text) == [OPEN, 'a', CLOSE,
+                           OPEN, 'b', CLOSE]
 
 
 def test_lex_basics():
     """Make sure some basic contruct lex (or properly fail to)."""
-    assert lexed('word***') == [OPENER, OPENER, 'word***', CLOSER, CLOSER]
-    assert lexed('(8 9 abc+)') == [OPENER, OPENER, '(', 8, 9, 'abc+', ')', CLOSER, CLOSER]
-    assert lexed('(1 2 (3 4))') == [OPENER, OPENER, '(', 1, 2, '(', 3, 4, ')', ')', CLOSER, CLOSER]
+    assert lexed('word***') == [OPEN, OPEN, 'word***', CLOSE, CLOSE]
+    assert lexed('(8 9 abc+)') == [OPEN, OPEN, '(', 8, 9, 'abc+', ')', CLOSE, CLOSE]
+    assert lexed('(1 2 (3 4))') == [OPEN, OPEN, '(', 1, 2, '(', 3, 4, ')', ')', CLOSE, CLOSE]
     with raises(LexError):
         lexed(')')
 
@@ -113,7 +113,7 @@ def parsed(text):
 
 
 def test_parse_single_line():
-    assert parse([OPENER, OPENER, 4, 5, CLOSER, CLOSER]) == [[4, 5]]
+    assert parse([OPEN, OPEN, 4, 5, CLOSE, CLOSE]) == [[4, 5]]
 
 
 def test_parse_indented():
@@ -122,19 +122,19 @@ def test_parse_indented():
   c 0
 d"""
     assert lexed(text) == [
-        OPENER,
-            OPENER,
+        OPEN,
+            OPEN,
                 'a',
-                OPENER,
-                    OPENER, 'b',
-                        OPENER,
-                            OPENER, 'c', 0, CLOSER,
-                        CLOSER,
-                    CLOSER,
-                CLOSER,
-            CLOSER,
-            OPENER, 'd', CLOSER,  # This one will be collapsed from a 1-list to an atom.
-        CLOSER
+                OPEN,
+                    OPEN, 'b',
+                        OPEN,
+                            OPEN, 'c', 0, CLOSE,
+                        CLOSE,
+                    CLOSE,
+                CLOSE,
+            CLOSE,
+            OPEN, 'd', CLOSE,  # This one will be collapsed from a 1-list to an atom.
+        CLOSE
     ]
     assert parsed(text) == [['a', [['b', [['c', 0]]]]], 'd']
 
@@ -148,14 +148,14 @@ if smoo
     0
     1"""
     assert lexed(text) == [
-        OPENER,
-            OPENER, 'if', 'smoo',
-                OPENER,
-                    OPENER, 0, CLOSER,
-                    OPENER, 1, CLOSER,
-                CLOSER,
-            CLOSER,
-        CLOSER,
+        OPEN,
+            OPEN, 'if', 'smoo',
+                OPEN,
+                    OPEN, 0, CLOSE,
+                    OPEN, 1, CLOSE,
+                CLOSE,
+            CLOSE,
+        CLOSE,
     ]
     assert parsed(text) == [['if', 'smoo', [0, 1]]]
 
@@ -196,28 +196,28 @@ if foo
     1
   else
     0""") == [
-    OPENER,
-        OPENER,
+    OPEN,
+        OPEN,
             'if', 'foo',
-                OPENER, OPENER, 1, CLOSER, CLOSER,
+                OPEN, OPEN, 1, CLOSE, CLOSE,
             'else',
-                OPENER, OPENER, 0, CLOSER, CLOSER,
-        CLOSER,
-    CLOSER]
+                OPEN, OPEN, 0, CLOSE, CLOSE,
+        CLOSE,
+    CLOSE]
 # I don't think an indent after a partial outdent is worth an indent.
 
 
 def test_impartial_outdent():
-    """Contrast with test_partial_outdent to learn in what situations closer behavior should be different."""
+    """Contrast with test_partial_outdent to learn in what situations CLOSE behavior should be different."""
     assert lexed("""
 if foo
     1
-    0""") == [OPENER,
-              OPENER, 'if', 'foo', OPENER,
-              OPENER, 1, CLOSER,
-              OPENER, 0, CLOSER,
-              CLOSER, CLOSER,
-              CLOSER]
+    0""") == [OPEN,
+              OPEN, 'if', 'foo', OPEN,
+              OPEN, 1, CLOSE,
+              OPEN, 0, CLOSE,
+              CLOSE, CLOSE,
+              CLOSE]
 
 
 def test_ending_at_partial_outdent():
@@ -225,18 +225,18 @@ def test_ending_at_partial_outdent():
 if foo
     1
   else""") == [
-    OPENER,
-        OPENER,
+    OPEN,
+        OPEN,
             'if', 'foo',
-                OPENER, OPENER, 1, CLOSER, CLOSER,
+                OPEN, OPEN, 1, CLOSE, CLOSE,
             'else',
-        CLOSER,
-    CLOSER]
+        CLOSE,
+    CLOSE]
 
 
 def test_one_liner():
-    """Make sure we emit a trailing CLOSER for one-liners."""
-    assert lexed("""foo""") == [OPENER, OPENER, 'foo', CLOSER, CLOSER]
+    """Make sure we emit a trailing CLOSE for one-liners."""
+    assert lexed("""foo""") == [OPEN, OPEN, 'foo', CLOSE, CLOSE]
 
 
 # if foo

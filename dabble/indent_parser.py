@@ -28,10 +28,10 @@ class TokenConst(object):
         return self.identity
 
 
-# OPENER and CLOSER represent the start and end of a whitespace-delimited list.
+# OPEN and CLOSE represent the start and end of a whitespace-delimited list.
 # They do not correspond directly to indents and outdents.
-OPENER = TokenConst('OPENER')
-CLOSER = TokenConst('CLOSER')
+OPEN = TokenConst('OPEN')
+CLOSE = TokenConst('CLOSE')
 
 
 def lex(text):
@@ -75,48 +75,48 @@ def lex(text):
                 if not at:  # BOF
                     print('BOF: [[')
                     at.append(0)
-                    yield OPENER
-                    yield OPENER
+                    yield OPEN
+                    yield OPEN
                 elif new_indent == old_indent:  # same dent
                     print('samedent: ][')
-                    yield CLOSER
+                    yield CLOSE
                     # Open the new (sibling) list we're about
                     # to start making:
-                    yield OPENER
+                    yield OPEN
                 elif new_indent.startswith(old_indent):  # indent
-                    print('indent and open the line: OPENER, OPENER')
+                    print('indent and open the line: OPEN, OPEN')
                     at.append(len(new_indent))
                     # Open the new (child) block we're about
                     # to start making:
-                    yield OPENER
+                    yield OPEN
                     # And open the first line of the block:
-                    yield OPENER
+                    yield OPEN
                 elif old_indent.startswith(new_indent):  # outdent
                     assert len(at) >= 2, "How can there be no encloser if we're outdenting?"
                     # You get one just for ending the line: this ends the
                     # current line's list.
                     print('    outdent or partial ]')
-                    yield CLOSER
+                    yield CLOSE
                     if len(new_indent) <= at[-2]:  # full outdent  # TODO: Don't just measure and keep track of lengths of indents, or we won't be able to support mixed tabs and spaces. Or will we? Maybe it just works, since indenting always adds length and dedenting always subtracts it.
                         print('full outdent')
                         # Then you get another for each level you outdent:
                         while len(at) >= 2 and len(new_indent) <= at[-2]:
                             print(f'    pop level {at[-1]} ]]')
-                            yield CLOSER
-                            yield CLOSER
+                            yield CLOSE
+                            yield CLOSE
                             at.pop()
                         # Now we're going to start a new line, because otherwise
                         # this would be EOF and be taken care of down at the
                         # bottom of this proc.
                         print('    and open: [')
-                        yield OPENER
+                        yield OPEN
                     else:  # partial outdent
                         # We outdented from the previous line but not out to the
                         # level of the previous indent.
 
                         print('partial outdent, so close block: ]')
                         # End the block:
-                        yield CLOSER
+                        yield CLOSE
                         # Pop the indentation into the block we just closed:
                         at.pop()
                 else:
@@ -143,29 +143,29 @@ def lex(text):
 
     for indent in at:
         print(f'EOF: ] to end line and block {indent}: ', end='')
-        yield CLOSER
-        yield CLOSER
+        yield CLOSE
+        yield CLOSE
 
 
 def _parse_list(token_iter, return_at):
-    """Start parsing the token stream at a list opener, either OPENER or '('.
-    Parse until we reach the matching closer, then return the parsed list plus a
+    """Start parsing the token stream at a list OPEN, either OPEN or '('.
+    Parse until we reach the matching CLOSE, then return the parsed list plus a
     bool representing whether we collapsed the list from a 1-list to an atom
     (and thus it shouldn't be collapsed further)."""
     ret = []
-    wrong_closer = ')' if return_at is OPENER else CLOSER
+    wrong_closer = ')' if return_at is OPEN else CLOSE
     # Whether we already collapsed the single list inside ``ret`` to an atom:
     collapsed = False
     for token in token_iter:
-        if token in (OPENER, '('):
-            awaited_closer = CLOSER if token is OPENER else ')'
+        if token in (OPEN, '('):
+            awaited_closer = CLOSE if token is OPEN else ')'
             l, collapsed = _parse_list(token_iter, awaited_closer)
             ret.append(l)
         elif token == return_at:
             # A single atom on a line is just the atom, not a 1-list:
-            if len(ret) == 1 and not isinstance(ret[0], list) and return_at is CLOSER and not collapsed:
+            if len(ret) == 1 and not isinstance(ret[0], list) and return_at is CLOSE and not collapsed:
                 # This is another way of saying we saw the token sequence
-                # OPENER, atom, CLOSER.
+                # OPEN, atom, CLOSE.
                 return ret[0], True
             return ret, False
         elif token == wrong_closer:
@@ -180,20 +180,20 @@ def _parse_list(token_iter, return_at):
 def parse(tokens):
     """Turn the token stream from the lexer into a parse tree.
 
-    parse() won't work unless the stream starts with an OPENER and ends with a
-    CLOSER.
+    parse() won't work unless the stream starts with an OPEN and ends with a
+    CLOSE.
 
     expr = atom | list
     atom = int | word
-    list = (OPENER expr* CLOSER) | ('(' expr* ')')
+    list = (OPEN expr* CLOSE) | ('(' expr* ')')
 
     """
     token_iter = iter(tokens)
 
     # Keep _parse_list() from adding an additional nested list inside the one it
-    # implicitly makes. It'll still happily match and consume the ending CLOSER.
-    assert next(token_iter) is OPENER
+    # implicitly makes. It'll still happily match and consume the ending CLOSE.
+    assert next(token_iter) is OPEN
 
-    l, collapsed = _parse_list(token_iter, CLOSER)
+    l, collapsed = _parse_list(token_iter, CLOSE)
     return l
     # TODO: Throw a fit if there are leftover tokens, meaning we prematurely closed all enclosers.
