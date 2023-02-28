@@ -42,13 +42,13 @@ def lex(text):
       previous one) is a list.
     * Indenting starts a new list inside the previous one.
     * The list continues until indentation goes back to the pre-indented level.
-    * One atom on a line is just an atom, not a 1-list. This will
-      keep us from having to overnotate in the branches of ifs, which are
-      common. And it will make our unary functions look like OCaml's--``foo
-      ()``--which have proven tolerable. We don't want to do exotic things like
-      make exceptions based on type (the expression is its own value if not a
-      function, a function call if a function), because then you can't write the
-      identity function and pass it a function.
+    * One atom or parenthesized expression on a line is just that expression,
+      not a 1-list of it. This will keep us from having to overnotate in the
+      branches of ifs, which are common. And it will make our unary functions
+      look like OCaml's--``foo ()``--which have proven tolerable. We don't want
+      to do exotic things like make exceptions based on type (the expression is
+      its own value if not a function, a function call if a function), because
+      then you can't write the identity function and pass it a function.
     * Both tabs and spaces are considered indentation.
     * Inconsistent indentation is an error. The whitespace characters that make
       up each indent must be either an addition to or a truncation of the ones
@@ -147,25 +147,32 @@ def _parse_list(token_iter, return_at):
     wrong_closer = ')' if return_at is CLOSE else CLOSE
     # Whether we already collapsed the single list inside ``ret`` to an atom:
     collapsed = False
+
+    # If the last (and only) list in me was delimited with explicit parentheses,
+    # don't collapse it. We never ignore explicit parens.
+    last_included_list_was_made_with_parens = False
+
     for token in token_iter:
         if token in (OPEN, '('):
             awaited_closer = CLOSE if token is OPEN else ')'
-            l, collapsed = _parse_list(token_iter, awaited_closer)
+            l, collapsed, last_included_list_was_made_with_parens = _parse_list(token_iter, awaited_closer)
             ret.append(l)
         elif token == return_at:
             # A single atom on a line is just the atom, not a 1-list of it:
-            if len(ret) == 1 and not isinstance(ret[0], list) and return_at is CLOSE and not collapsed:
+            if len(ret) == 1 and (last_included_list_was_made_with_parens or not isinstance(ret[0], list)) and return_at is CLOSE and not collapsed:
                 # This is another way of saying we saw the token sequence
-                # OPEN, atom, CLOSE.
-                return ret[0], True
-            return ret, False
+                # OPEN, expression, CLOSE. Collapse the list: shuck off one
+                # layer of opens and closes.
+                return ret[0], True, False
+            return ret, False, (return_at == ')')
         elif token == wrong_closer:
             # Superfluous end parentheses (that is, missing dedents) are caught
             # earlier, in the lexer.
             raise LexError("You're missing an end parenthesis.")
         else:
             ret.append(token)
-    return ret, False
+
+    raise RuntimeError("Should never get here. We should always return by encountering a CLOSE or end parenthesis. Well-formedness should be checked by the lexer and the LexError returned just above.")
 
 
 def parse(tokens):
@@ -185,6 +192,6 @@ def parse(tokens):
     # implicitly makes. It'll still happily match and consume the ending CLOSE.
     assert next(token_iter) is OPEN
 
-    l, collapsed = _parse_list(token_iter, CLOSE)
+    l, _, _ = _parse_list(token_iter, CLOSE)
     return l
     # TODO: Throw a fit if there are leftover tokens, meaning we prematurely closed all enclosers.

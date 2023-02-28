@@ -87,8 +87,8 @@ def test_lex_basics():
 def test_parse_basics():
     #assert parsed('"hi"') == '"hi"'  # strings not supported yet
     assert parsed('word***') == ['word***']
-    assert parsed('(8 9 abc+)') == [[[8, 9, 'abc+']]]
-    assert parsed('(1 2 (3 4))') == [[[1, 2, [3, 4]]]]
+    assert parsed('(8 9 abc+)') == [[8, 9, 'abc+']]
+    assert parsed('(1 2 (3 4))') == [[1, 2, [3, 4]]]
     with raises(LexError):
         parsed(')')
 
@@ -236,8 +236,6 @@ def test_1_lists():
     assert parsed("""(frob)""") == [  # BOF OPEN
         ['frob']
     ]  # EOF CLOSE
-    # When this passes, take the workarounds out of
-    # test_functions_make_new_scopes and test_nested_functions_make_new_scopes.
 
 
 # if foo

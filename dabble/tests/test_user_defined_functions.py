@@ -59,29 +59,25 @@ def test_functions_make_new_scopes():
     assert run("""
 set x 8
 set frob
-    fun (dummy)
+    fun ()
         set x 9
-frob 4
+(frob)
 x
     """) == 8
-    # The dummy "4" param exists because I can't seem to make "frob" parse as
-    # [frob] yet. It's either [[frob]] or just plain frob. See test_1_lists.
 
 
 def test_nested_functions_make_new_scopes():
     """Make sure inner functions' vars don't leak into outers' scopes."""
     assert run("""
 set frob
-    fun (dummy)
+    fun ()
         begin
             set x 1
             set smoo
-                fun (dummy)
+                fun ()
                     set x 2
-            smoo 4
+            smoo
             x
 
-frob 4
+(frob)
     """) == 1
-    # The dummy "4" param exists because I can't seem to make "frob" parse as
-    # [frob] yet. It's either [[frob]] or just plain frob. See test_1_lists.
