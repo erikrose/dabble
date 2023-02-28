@@ -1,0 +1,86 @@
+-- Indent starts one list. Begin takes varargs. Partial outdent is needed for continuation. Verdict: way too intricate and confusing.
+if foo then
+    begin
+        foo
+        bar
+        baz
+  else  -- has to be partially outdented or it's start a peer list with the `begin` one
+    begin
+        foo
+        bar
+        baz
+-- If partial indents are too hard to type or hard to read, we could spell them as `...else`, without any indent.
+            
+
+-- Colon implies a following implicit block list. Partial outdents continue.
+if foo then:
+    foo
+    bar
+    baz
+  else:
+    qux
+-- Comes out to (without applying the single-atom rule):
+(if foo then ((foo) (bar) (baz)) else ((qux))
+-- (instead of `(if foo then (foo) (bar) (baz) else (qux))`)
+if foo then 0 else 1
+if foo then (flub 0) else (floob 1)
+-- How do we make all the above work?
+-- Make execution semantics say that a list that starts with another list gets all its elements eval'd and returns the results of the last one. (If you want to return a literal list containing a list, quote it.) OTOH, then you can't do `((get-some-function hash hashkey) arg1 arg2)`, so maybe we should make : turn into `[begin line1 line2 ...]` or something. (`do` is a better name for `begin`.)
+-- Applies nicely to functions and loops too:
+fun frob:
+    boo
+    baz
+    fum
+-- If we want to reserve colon for marking args like ObjC, use ... instead. If we wanted, we could even get some nice symmetry out of that, replacing partials with a leading `...`:
+if foo then…
+    bar
+    baz
+…else…
+    qux
+
+if foo then:
+    bar
+    baz
+  else:
+    qux
+-- Check: can we represent [[foo]] without any brackets?
+:
+    foo
+-- Check: [[[foo]]]
+:
+    :
+        foo
+== [[[[foo]]]]
+-- so no. It needs to be…
+:
+    (foo)
+-- But hopefully that doesn't come up much in macros in places where we wouldn't have written a "(" by hand anyway.
+-- What about config examples?
+User
+    name Fred
+    age 35
+User:
+    name Fred
+    age 35
+-- Either of those could be valid, depending on what you want for your config grammar. It'll be error-prone to choose wrongly about whether to put the colon there. (Actually, if we elect to have : turn into `begin`, we'll generally never have colons in data dialects.)
+-- But maybe we can (statically) validate dabble list structure according to function/type definitions and give pre-runtime errors. Nothing is untagged.
+
+-- Can we represent match clauses?
+match foo with:
+    (one two (three four)):
+        foo
+        bar
+        baz
+    (five 6):
+        qux
+    
+
+
+-- Double indent means implicit block list. Peer blocks don't align. It's ugly. It's hard or impossible to figure out what indent size the user is using and thus what counts as a double indent.
+if foo then
+        foo
+        bar
+        baz
+    else
+            qux
+            mux

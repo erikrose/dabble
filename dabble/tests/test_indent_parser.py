@@ -34,9 +34,9 @@ d"""
     assert lexed(text) == [
         OPEN,
             OPEN, 'a',
-                OPEN, OPEN, 'b',
-                    OPEN, OPEN, 'c', CLOSE, CLOSE,
-                CLOSE, CLOSE,
+                OPEN, 'b',
+                    OPEN, 'c', CLOSE,
+                CLOSE,
             CLOSE,
             OPEN, 'd', CLOSE,
         CLOSE]
@@ -51,11 +51,11 @@ def test_close_indents_at_eof():
     assert lexed(text) == [
         OPEN,
         OPEN, 'a',
-            OPEN, OPEN, 'b',
-                OPEN, OPEN, 'c',
-                    OPEN, OPEN, 'd', CLOSE, CLOSE,
-                CLOSE, CLOSE,
-            CLOSE, CLOSE,
+            OPEN, 'b',
+                OPEN, 'c',
+                    OPEN, 'd', CLOSE,
+                CLOSE,
+            CLOSE,
         CLOSE,
         CLOSE]
 
@@ -104,7 +104,7 @@ def test_whitespace_only_lines_are_skipped():
     text = """a
 
      b 0"""
-    assert parsed(text) == [['a', [['b', 0]]]]
+    assert parsed(text) == [['a', ['b', 0]]]
 
 
 def parsed(text):
@@ -125,18 +125,14 @@ d"""
         OPEN,
             OPEN,
                 'a',
-                OPEN,
-                    OPEN, 'b',
-                        OPEN,
-                            OPEN, 'c', 0, CLOSE,
-                        CLOSE,
-                    CLOSE,
+                OPEN, 'b',
+                    OPEN, 'c', 0, CLOSE,
                 CLOSE,
             CLOSE,
             OPEN, 'd', CLOSE,  # This one will be collapsed from a 1-list to an atom.
         CLOSE
     ]
-    assert parsed(text) == [['a', [['b', [['c', 0]]]]], 'd']
+    assert parsed(text) == [['a', ['b', ['c', 0]]], 'd']
 
 
 def test_single_atom_is_not_list():
@@ -150,21 +146,19 @@ if smoo
     assert lexed(text) == [
         OPEN,
             OPEN, 'if', 'smoo',
-                OPEN,
-                    OPEN, 0, CLOSE,
-                    OPEN, 1, CLOSE,
-                CLOSE,
+                OPEN, 0, CLOSE,
+                OPEN, 1, CLOSE,
             CLOSE,
         CLOSE,
     ]
-    assert parsed(text) == [['if', 'smoo', [0, 1]]]
+    assert parsed(text) == [['if', 'smoo', 0, 1]]
 
 
 def test_parens():
     assert parsed('1 (2 3 4) 5') == [[1, [2, 3, 4], 5]]
     assert parsed("""
 1
-    2 (3 4 5)""") == [[1, [[2, [3, 4, 5]]]]]
+    2 (3 4 5)""") == [[1, [2, [3, 4, 5]]]]
 
 
 def test_single_atom_in_parens_is_a_list():
@@ -173,9 +167,8 @@ def test_single_atom_in_parens_is_a_list():
     text = """
 fun (x)
     2"""
-    # The brackets around the 2 are for the block. The ones for the line that
-    # would make it a 1-list are gone.
-    assert parsed(text) == [['fun', ['x'], [2]]]
+    # The brackets that would have made the 2 a 1-list are gone.
+    assert parsed(text) == [['fun', ['x'], 2]]
 
 
 def test_indentation_ignored_inside_parens():
@@ -185,7 +178,7 @@ def test_indentation_ignored_inside_parens():
   2 (3
 4
   5 6
-7) 8""") == [[1, [[2, [3, 4, 5, 6, 7], 8]]]]
+7) 8""") == [[1, [2, [3, 4, 5, 6, 7], 8]]]
 
 
 def test_partial_outdent():
@@ -199,9 +192,9 @@ if foo
     OPEN,
         OPEN,
             'if', 'foo',
-                OPEN, OPEN, 1, CLOSE, CLOSE,
+                OPEN, 1, CLOSE,
             'else',
-                OPEN, OPEN, 0, CLOSE, CLOSE,
+                OPEN, 0, CLOSE,
         CLOSE,
     CLOSE]
 # I don't think an indent after a partial outdent is worth an indent.
@@ -213,10 +206,10 @@ def test_impartial_outdent():
 if foo
     1
     0""") == [OPEN,
-              OPEN, 'if', 'foo', OPEN,
+              OPEN, 'if', 'foo',
               OPEN, 1, CLOSE,
               OPEN, 0, CLOSE,
-              CLOSE, CLOSE,
+              CLOSE,
               CLOSE]
 
 
@@ -225,18 +218,26 @@ def test_ending_at_partial_outdent():
 if foo
     1
   else""") == [
-    OPEN,
-        OPEN,
-            'if', 'foo',
-                OPEN, OPEN, 1, CLOSE, CLOSE,
-            'else',
-        CLOSE,
-    CLOSE]
+    OPEN, OPEN,
+        'if', 'foo',
+            OPEN, 1, CLOSE,
+        'else',
+    CLOSE, CLOSE]
 
 
 def test_one_liner():
     """Make sure we emit a trailing CLOSE for one-liners."""
     assert lexed("""foo""") == [OPEN, OPEN, 'foo', CLOSE, CLOSE]
+
+
+def test_1_lists():
+    """Make sure we can represent a list of 1 element on a line by itself."""
+    assert lexed("""(frob)""") == [OPEN, OPEN, '(', 'frob', ')', CLOSE, CLOSE]
+    assert parsed("""(frob)""") == [  # BOF OPEN
+        ['frob']
+    ]  # EOF CLOSE
+    # When this passes, take the workarounds out of
+    # test_functions_make_new_scopes and test_nested_functions_make_new_scopes.
 
 
 # if foo
